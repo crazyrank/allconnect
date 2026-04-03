@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import useAuthStore from '../store/authStore';
 import SearchUsers from '../components/SearchUsers';
+import CreateGroup from '../components/CreateGroup';
 import socket from '../services/socket';
 import api from '../services/api';
 
@@ -119,6 +120,12 @@ function Chat() {
     if (exists) return prev;
     return [conv, ...prev];
   });
+  openConversation(conv);
+}} />
+
+{/* Create Group */}
+<CreateGroup onGroupCreated={(conv) => {
+  setConversations((prev) => [conv, ...prev]);
   openConversation(conv);
 }} />
 
