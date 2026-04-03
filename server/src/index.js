@@ -22,16 +22,68 @@ app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
 
+// Store online users
+const onlineUsers = new Map();
+
 io.on('connection', (socket) => {
   console.log('A user connected:', socket.id);
-  socket.on('disconnect', () => console.log('User disconnected:', socket.id));
+
+  // User comes online
+  socket.on('user:online', (userId) => {
+    onlineUsers.set(userId, socket.id);
+    io.emit('users:online', Array.from(onlineUsers.keys()));
+    console.log(`${userId} is online`);
+  });
+
+  // User joins a conversation room
+  socket.on('conversation:join', (conversationId) => {
+    socket.join(conversationId);
+    console.log(`User joined conversation: ${conversationId}`);
+  });
+
+  // User leaves a conversation room
+  socket.on('conversation:leave', (conversationId) => {
+    socket.leave(conversationId);
+    console.log(`User left conversation: ${conversationId}`);
+  });
+
+  // New message
+  socket.on('message:send', (message) => {
+    io.to(message.conversation).emit('message:receive', message);
+  });
+
+  // Typing indicator
+  socket.on('typing:start', ({ conversationId, userId, username }) => {
+    socket.to(conversationId).emit('typing:start', { userId, username });
+  });
+
+  socket.on('typing:stop', ({ conversationId, userId }) => {
+    socket.to(conversationId).emit('typing:stop', { userId });
+  });
+
+  // User goes offline
+  socket.on('disconnect', () => {
+    onlineUsers.forEach((socketId, userId) => {
+      if (socketId === socket.id) {
+        onlineUsers.delete(userId);
+        io.emit('users:online', Array.from(onlineUsers.keys()));
+        console.log(`${userId} went offline`);
+      }
+    });
+  });
 });
 
+// Make io accessible in routes
+app.set('io', io);
+
+// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 
+// Error Handler
 app.use(errorHandler);
 
+// DB + Server
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('MongoDB connected');
