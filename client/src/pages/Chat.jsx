@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import useAuthStore from '../store/authStore';
+import SearchUsers from '../components/SearchUsers';
 import socket from '../services/socket';
 import api from '../services/api';
 
@@ -110,6 +111,18 @@ function Chat() {
             Logout
           </button>
         </div>
+
+{/* Search */}
+<SearchUsers onConversationStart={(conv) => {
+  setConversations((prev) => {
+    const exists = prev.find((c) => c._id === conv._id);
+    if (exists) return prev;
+    return [conv, ...prev];
+  });
+  openConversation(conv);
+}} />
+
+ 
 
         {/* Conversations */}
         <div className="flex-1 overflow-y-auto">

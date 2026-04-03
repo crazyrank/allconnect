@@ -10,6 +10,7 @@ require('dotenv').config();
 const authRoutes = require('./routes/authRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const errorHandler = require('./middleware/errorHandler');
+const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -21,6 +22,7 @@ app.use(cors({ origin: process.env.CLIENT_URL }));
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
+app.use('/api/users', userRoutes);
 
 // Store online users
 const onlineUsers = new Map();
