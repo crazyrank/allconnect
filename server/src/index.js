@@ -9,8 +9,9 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
 const chatRoutes = require('./routes/chatRoutes');
-const errorHandler = require('./middleware/errorHandler');
 const userRoutes = require('./routes/userRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
+const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 const server = http.createServer(app);
@@ -22,39 +23,32 @@ app.use(cors({ origin: process.env.CLIENT_URL }));
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
-app.use('/api/users', userRoutes);
 
-// Store online users
 const onlineUsers = new Map();
 
 io.on('connection', (socket) => {
   console.log('A user connected:', socket.id);
 
-  // User comes online
   socket.on('user:online', (userId) => {
     onlineUsers.set(userId, socket.id);
     io.emit('users:online', Array.from(onlineUsers.keys()));
     console.log(`${userId} is online`);
   });
 
-  // User joins a conversation room
   socket.on('conversation:join', (conversationId) => {
     socket.join(conversationId);
     console.log(`User joined conversation: ${conversationId}`);
   });
 
-  // User leaves a conversation room
   socket.on('conversation:leave', (conversationId) => {
     socket.leave(conversationId);
     console.log(`User left conversation: ${conversationId}`);
   });
 
-  // New message
   socket.on('message:send', (message) => {
     io.to(message.conversation).emit('message:receive', message);
   });
 
-  // Typing indicator
   socket.on('typing:start', ({ conversationId, userId, username }) => {
     socket.to(conversationId).emit('typing:start', { userId, username });
   });
@@ -63,7 +57,6 @@ io.on('connection', (socket) => {
     socket.to(conversationId).emit('typing:stop', { userId });
   });
 
-  // User goes offline
   socket.on('disconnect', () => {
     onlineUsers.forEach((socketId, userId) => {
       if (socketId === socket.id) {
@@ -75,12 +68,13 @@ io.on('connection', (socket) => {
   });
 });
 
-// Make io accessible in routes
 app.set('io', io);
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Error Handler
 app.use(errorHandler);
