@@ -51,7 +51,7 @@ function Login() {
               onChange={handleChange}
               required
               className="w-full bg-gray-800 text-white rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="••••••••"
+              placeholder="•••••••••••"
             />
           </div>
 

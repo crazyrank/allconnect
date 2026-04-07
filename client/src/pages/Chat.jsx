@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import useAuthStore from '../store/authStore';
 import SearchUsers from '../components/SearchUsers';
 import CreateGroup from '../components/CreateGroup';
+import EmojiPicker from 'emoji-picker-react';
 import socket from '../services/socket';
 import api from '../services/api';
 
@@ -13,8 +14,9 @@ function Chat() {
   const [newMessage, setNewMessage] = useState('');
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [typing, setTyping] = useState(null);
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  // Connect socket and fetch conversations
   useEffect(() => {
     if (user) {
       socket.connect();
@@ -76,6 +78,40 @@ function Chat() {
     }
   };
 
+  const sendFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !activeConversation) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadRes = await api.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const res = await api.post('/chat/message', {
+        conversationId: activeConversation._id,
+        content: '',
+        mediaUrl: uploadRes.data.url,
+        mediaType: uploadRes.data.mediaType,
+      });
+      socket.emit('message:send', res.data.message);
+      setMessages((prev) => [...prev, res.data.message]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const deleteMessage = async (messageId) => {
+    try {
+      await api.delete(`/chat/message/${messageId}`);
+      setMessages((prev) => prev.filter((m) => m._id !== messageId));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleTyping = (e) => {
     setNewMessage(e.target.value);
     socket.emit('typing:start', {
@@ -113,23 +149,21 @@ function Chat() {
           </button>
         </div>
 
-{/* Search */}
-<SearchUsers onConversationStart={(conv) => {
-  setConversations((prev) => {
-    const exists = prev.find((c) => c._id === conv._id);
-    if (exists) return prev;
-    return [conv, ...prev];
-  });
-  openConversation(conv);
-}} />
+        {/* Search */}
+        <SearchUsers onConversationStart={(conv) => {
+          setConversations((prev) => {
+            const exists = prev.find((c) => c._id === conv._id);
+            if (exists) return prev;
+            return [conv, ...prev];
+          });
+          openConversation(conv);
+        }} />
 
-{/* Create Group */}
-<CreateGroup onGroupCreated={(conv) => {
-  setConversations((prev) => [conv, ...prev]);
-  openConversation(conv);
-}} />
-
- 
+        {/* Create Group */}
+        <CreateGroup onGroupCreated={(conv) => {
+          setConversations((prev) => [conv, ...prev]);
+          openConversation(conv);
+        }} />
 
         {/* Conversations */}
         <div className="flex-1 overflow-y-auto">
@@ -191,23 +225,79 @@ function Chat() {
               {messages.map((msg) => (
                 <div
                   key={msg._id}
-                  className={`flex ${msg.sender._id === user?._id ? 'justify-end' : 'justify-start'}`}
+                  className={`flex group ${msg.sender._id === user?._id ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div
-                    className={`max-w-xs px-4 py-2 rounded-2xl text-sm ${
-                      msg.sender._id === user?._id
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-800 text-white'
-                    }`}
-                  >
-                    {msg.content}
+                  <div className="relative">
+                    <div
+                      className={`max-w-xs px-4 py-2 rounded-2xl text-sm ${
+                        msg.sender._id === user?._id
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-800 text-white'
+                      }`}
+                    >
+                      {msg.mediaType === 'image' ? (
+  <img
+    src={msg.mediaUrl}
+    alt="media"
+    className="rounded-xl max-w-full cursor-pointer"
+    onClick={() => window.open(msg.mediaUrl, '_blank')}
+  />
+) : msg.mediaUrl ? (
+  <a
+    href={msg.mediaUrl}
+    target="_blank"
+    rel="noreferrer"
+    className="underline text-blue-200 hover:text-blue-100 break-all"
+  >
+    📎 View File
+  </a>
+) : (
+  msg.content
+)}
+                    </div>
+                    {/* Delete button - only for own messages */}
+                    {msg.sender._id === user?._id && (
+                      <button
+                        onClick={() => deleteMessage(msg._id)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 items-center justify-center hidden group-hover:flex"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
 
             {/* Message Input */}
-            <form onSubmit={sendMessage} className="p-4 border-t border-gray-800 flex gap-3">
+            <form onSubmit={sendMessage} className="p-4 border-t border-gray-800 flex gap-3 relative">
+              {showEmoji && (
+                <div className="absolute bottom-20 left-4 z-50">
+                  <EmojiPicker
+                    theme="dark"
+                    onEmojiClick={(e) => {
+                      setNewMessage((prev) => prev + e.emoji);
+                      setShowEmoji(false);
+                    }}
+                  />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowEmoji(!showEmoji)}
+                className="text-gray-400 hover:text-yellow-400 text-xl transition"
+              >
+                😊
+              </button>
+              <label className="text-gray-400 hover:text-blue-400 text-xl transition cursor-pointer flex items-center">
+                {uploading ? '⏳' : '📎'}
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={sendFile}
+                  accept="image/*,application/pdf,audio/*"
+                />
+              </label>
               <input
                 type="text"
                 value={newMessage}

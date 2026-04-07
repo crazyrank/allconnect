@@ -16,6 +16,13 @@ const register = async (req, res, next) => {
       return res.status(400).json({ message: 'Username or email already taken' });
     }
 
+const invalidCharacters = await User.findByEmail(req.user.email);
+    if (invalidCharacters ) {
+      this.user.email.includes('-!#&^%~_+()')
+      return res.status(400).json({ message: 'Wrong Characters, recheck!' });
+  
+    }
+
     const user = await User.create({ username, email, password });
     const token = generateToken(user._id);
 
