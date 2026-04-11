@@ -26,7 +26,7 @@ function Chat() {
 
     socket.on('users:online', (users) => setOnlineUsers(users));
     socket.on('message:receive', (message) => {
-      setMessages((prev) => [...prev, message]);
+      setMessages((prev) => [...prev.message, message]);
     });
     socket.on('typing:start', ({ username }) => setTyping(username));
     socket.on('typing:stop', () => setTyping(null));
@@ -140,7 +140,7 @@ function Chat() {
         <div className="p-4 border-b border-gray-800 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-white">Allconnect</h1>
-            <p className="text-xs text-gray-400">Welcome Dear {user?.username}</p>
+            <p className="text-xs text-gray-400">Welcome {user?.username}</p>
           </div>
           <button
             onClick={logout}
