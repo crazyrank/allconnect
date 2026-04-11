@@ -6,8 +6,7 @@ const User = require('../models/User');
 const createOrGetConversation = async (req, res, next) => {
   try {
     const { receiverId } = req.body;
-
-    // Check if conversation already exists
+ 
     let conversation = await Conversation.findOne({
       isGroup: false,
       members: { $all: [req.user.id, receiverId] },
@@ -16,8 +15,7 @@ const createOrGetConversation = async (req, res, next) => {
     if (conversation) {
       return res.status(200).json({ conversation });
     }
-
-    // Create new conversation
+    
     conversation = await Conversation.create({
       members: [req.user.id, receiverId],
       isGroup: false,

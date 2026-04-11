@@ -7,6 +7,7 @@ const generateToken = (id) => {
   });
 };
 
+
 const register = async (req, res, next) => {
   try {
     const { username, email, password } = req.body;
@@ -16,13 +17,23 @@ const register = async (req, res, next) => {
       return res.status(400).json({ message: 'Username or email already taken' });
     }
 
-const invalidCharacters = await User.findByEmail(req.user.email);
-    if (invalidCharacters ) {
-      this.user.email.includes('-!#&^%~_+()')
-      return res.status(400).json({ message: 'Wrong Characters, recheck!' });
-  
-    }
+ 
 
+const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+if (!emailPattern.test(email)) {
+  return res.status(400).json({ message: 'Invalid email format' });
+}
+
+const usernamePattern = /^[a-zA-Z0-9._%+-]{4,}$/;
+if (!usernamePattern.test(username)) {
+  return res.status(400).json({ message: 'Invalid username format' });
+}
+
+const passwordPattern = /^[a-zA-Z0-9._%+-]{6,}$/;
+if (!passwordPattern.test(password)) {
+  return res.status(400).json({ message: 'Password must include . _ % + - and must be not less than 7 a'});
+}
+ 
     const user = await User.create({ username, email, password });
     const token = generateToken(user._id);
 
@@ -34,12 +45,15 @@ const invalidCharacters = await User.findByEmail(req.user.email);
         email: user.email,
         avatar: user.avatar,
         isOnline: user.isOnline,
+        role:user.role,
       },
     });
   } catch (err) {
     next(err);
   }
 };
+
+
 
 const login = async (req, res, next) => {
   try {
@@ -67,12 +81,15 @@ const login = async (req, res, next) => {
         email: user.email,
         avatar: user.avatar,
         isOnline: true,
+        role:user.role,
       },
     });
   } catch (err) {
     next(err);
   }
 };
+
+
 
 const logout = async (req, res, next) => {
   try {
