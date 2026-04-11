@@ -134,13 +134,13 @@ function Chat() {
                
   return (
     <div className="flex h-screen bg-gray-950 text-white">
-      {/* Sidebar */}
+  
       <div className="w-80 bg-gray-900 flex flex-col border-r border-gray-800">
-        {/* Header */}
+ 
         <div className="p-4 border-b border-gray-800 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-white">AllConnect</h1>
-            <p className="text-xs text-gray-400">@{user?.username}</p>
+            <h1 className="text-xl font-bold text-white">Allconnect</h1>
+            <p className="text-xs text-gray-400">Welcome Dear {user?.username}</p>
           </div>
           <button
             onClick={logout}
@@ -150,7 +150,7 @@ function Chat() {
           </button>
         </div>
 
-        {/* Search */}
+      
         <SearchUsers onConversationStart={(conv) => {
           setConversations((prev) => {
             const exists = prev.find((c) => c._id === conv._id);
@@ -160,13 +160,12 @@ function Chat() {
           openConversation(conv);
         }} />
 
-        {/* Create Group */}
+      
         <CreateGroup onGroupCreated={(conv) => {
           setConversations((prev) => [conv, ...prev]);
           openConversation(conv);
         }} />
-
-        {/* Conversations */}
+ 
         <div className="flex-1 overflow-y-auto">
           {conversations.length === 0 ? (
             <p className="text-gray-500 text-sm text-center mt-8">No conversations yet</p>
@@ -205,11 +204,11 @@ function Chat() {
         </div>
       </div>
 
-      {/* Chat Area */}
+ 
       <div className="flex-1 flex flex-col">
         {activeConversation ? (
           <>
-            {/* Chat Header */}
+ 
             <div className="p-4 border-b border-gray-800 bg-gray-900">
               <p className="font-semibold">
                 {activeConversation.isGroup
@@ -221,7 +220,7 @@ function Chat() {
               )}
             </div>
 
-            {/* Messages */}
+   
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
                {messages.map((msg, index) => (
   
@@ -280,7 +279,7 @@ function Chat() {
               ))}
             </div>
 
-            {/* Message Input */}
+    
             <form onSubmit={sendMessage} className="p-4 border-t border-gray-800 flex gap-3 relative">
               {showEmoji && (
                 <div className="absolute bottom-20 left-4 z-50">
@@ -328,7 +327,7 @@ function Chat() {
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <p className="text-4xl mb-4">💬</p>
-              <p className="text-gray-400">Select a conversation to start chatting</p>
+              <p className="text-gray-400">Search / Select a conversation to start chatting</p>
             </div>
           </div>
         )}
