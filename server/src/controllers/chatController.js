@@ -89,6 +89,10 @@ const sendMessage = async (req, res, next) => {
 
     const populated = await message.populate('sender', 'username avatar');
 
+
+    const io = req.app.get('io');
+    io.to(conversationId).emit('message:recieve', populated)
+
     res.status(201).json({ message: populated });
   } catch (err) {
     next(err);

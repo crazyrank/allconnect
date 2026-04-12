@@ -7,7 +7,6 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 require('dotenv').config();
 
-
 const authRoutes = require('./routes/authRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -16,34 +15,55 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 const server = http.createServer(app);
+
+// CORS config -- defined once, used everywhere
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:5175",
+  process.env.CLIENT_URL
+].filter(Boolean);
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Request from this origin is not allowed"));
+    }
+  },
+  credentials: true
+};
+
+// Socket.IO -- defined once
 const io = new Server(server, {
-  cors: { origin: process.env.CLIENT_URL, methods: ['GET', 'POST'] }
+  cors: corsOptions
 });
 
-app.use(cors({ origin: process.env.CLIENT_URL }));
+// Middleware
+app.use(cors(corsOptions));
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
 
+// Socket events
 const onlineUsers = new Map();
 
 io.on('connection', (socket) => {
   console.log('A user connected:', socket.id);
 
   socket.on('user:online', (userId) => {
-     onlineUsers.set(userId, socket.id);
+    onlineUsers.set(userId, socket.id);
     io.emit('users:online', Array.from(onlineUsers.keys()));
     console.log(`${userId} is online`);
   });
 
   socket.on('conversation:join', (conversationId) => {
     socket.join(conversationId);
-    console.log(`User joined conversation: ${conversationId}`);
   });
 
   socket.on('conversation:leave', (conversationId) => {
     socket.leave(conversationId);
-    console.log(`User left conversation: ${conversationId}`);
   });
 
   socket.on('message:send', (message) => {
