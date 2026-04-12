@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import useAuthStore from '../store/authStore';
 import SearchUsers from '../components/SearchUsers';
 import CreateGroup from '../components/CreateGroup';
@@ -16,6 +16,12 @@ function Chat() {
   const [typing, setTyping] = useState(null);
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  // Auto-scroll to latest message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   useEffect(() => {
     if (user) {
@@ -26,7 +32,7 @@ function Chat() {
 
     socket.on('users:online', (users) => setOnlineUsers(users));
     socket.on('message:receive', (message) => {
-      setMessages((prev) => [...prev.message, message]);
+      setMessages((prev) => [...prev, message]);
     });
     socket.on('typing:start', ({ username }) => setTyping(username));
     socket.on('typing:stop', () => setTyping(null));
@@ -71,8 +77,7 @@ function Chat() {
         content: newMessage,
       });
       socket.emit('message:send', res.data.message);
-  
-      setNewMessage('');
+      setNewMessage(''); // let socket message:receive handle adding to state
     } catch (err) {
       console.error(err);
     }
@@ -95,7 +100,7 @@ function Chat() {
         mediaType: uploadRes.data.mediaType,
       });
       socket.emit('message:send', res.data.message);
-      setMessages((prev) => [...prev, res.data.message]);
+      // let socket message:receive handle adding to state
     } catch (err) {
       console.error(err);
     } finally {
@@ -131,12 +136,13 @@ function Chat() {
     return conversation.members.find((m) => m._id !== user?._id);
   };
 
-               
   return (
     <div className="flex h-screen bg-gray-950 text-white">
-  
+
+      {/* Sidebar */}
       <div className="w-80 bg-gray-900 flex flex-col border-r border-gray-800">
- 
+
+        {/* Header */}
         <div className="p-4 border-b border-gray-800 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-white">Allconnect</h1>
@@ -150,7 +156,6 @@ function Chat() {
           </button>
         </div>
 
-      
         <SearchUsers onConversationStart={(conv) => {
           setConversations((prev) => {
             const exists = prev.find((c) => c._id === conv._id);
@@ -160,13 +165,13 @@ function Chat() {
           openConversation(conv);
         }} />
 
-      
         <CreateGroup onGroupCreated={(conv) => {
           setConversations((prev) => [conv, ...prev]);
           openConversation(conv);
         }} />
- 
-        <div className="flex-1 overflow-y-auto">
+
+        {/* Conversations list */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
           {conversations.length === 0 ? (
             <p className="text-gray-500 text-sm text-center mt-8">No conversations yet</p>
           ) : (
@@ -204,11 +209,11 @@ function Chat() {
         </div>
       </div>
 
- 
-      <div className="flex-1 flex flex-col">
+      {/* Chat area */}
+      <div className="flex-1 flex flex-col min-w-0">
         {activeConversation ? (
           <>
- 
+            {/* Chat header */}
             <div className="p-4 border-b border-gray-800 bg-gray-900">
               <p className="font-semibold">
                 {activeConversation.isGroup
@@ -220,52 +225,59 @@ function Chat() {
               )}
             </div>
 
-   
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-               {messages.map((msg, index) => (
-  
-  <div
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3">
+              {messages.map((msg, index) => (
+                <div
                   key={`${msg._id}-${index}`}
-                  className={`flex group ${msg.sender._id === user?._id ? 
-                    'justify-end' : 'justify-start'}`}  
-                > <div className="mb-1">
-  <p className="text-xs font-medium text-gray-300">
-    {msg.sender?.fullName || msg.sender?.username }
-    </p>
- 
-  <p className="text-xs text-gray-400">
-    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-  </p>
-</div>
-                  <div className="relative">
+                  className={`flex flex-col ${
+                    msg.sender._id === user?._id ? 'items-end' : 'items-start'
+                  }`}
+                >
+                  {/* Sender name + time */}
+                  <div className="mb-1 px-1 flex items-center gap-2">
+                    <span className="text-xs font-medium text-gray-300">
+                      {msg.sender?.fullName || msg.sender?.username}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {new Date(msg.createdAt).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+
+                  {/* Bubble */}
+                  <div className="relative group">
                     <div
-                      className={`max-w-xs px-4 py-2 rounded-2xl text-sm ${
+                      className={`max-w-xs px-4 py-2 rounded-2xl text-sm break-words ${
                         msg.sender._id === user?._id
                           ? 'bg-blue-600 text-white'
                           : 'bg-gray-800 text-white'
                       }`}
                     >
                       {msg.mediaType === 'image' ? (
-  <img
-    src={msg.mediaUrl}
-    alt="media"
-    className="rounded-xl max-w-full cursor-pointer"
-    onClick={() => window.open(msg.mediaUrl, '_blank')}
-  />
-) : msg.mediaUrl ? (
-  <a
-    href={msg.mediaUrl}
-    target="_blank"
-    rel="noreferrer"
-    className="underline text-blue-200 hover:text-blue-100 break-all"
-  >
-    📎 View File
-  </a>
-) : (
-  msg.content
-)}
+                        <img
+                          src={msg.mediaUrl}
+                          alt="media"
+                          className="rounded-xl max-w-full cursor-pointer"
+                          onClick={() => window.open(msg.mediaUrl, '_blank')}
+                        />
+                      ) : msg.mediaUrl ? (
+                        <a
+                          href={msg.mediaUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline text-blue-200 hover:text-blue-100 break-all"
+                        >
+                          📎 View File
+                        </a>
+                      ) : (
+                        msg.content
+                      )}
                     </div>
-                    {/* Delete button - only for own messages */}
+
+                    {/* Delete button - own messages only */}
                     {msg.sender._id === user?._id && (
                       <button
                         onClick={() => deleteMessage(msg._id)}
@@ -277,10 +289,15 @@ function Chat() {
                   </div>
                 </div>
               ))}
+              {/* Auto-scroll anchor */}
+              <div ref={messagesEndRef} />
             </div>
 
-    
-            <form onSubmit={sendMessage} className="p-4 border-t border-gray-800 flex gap-3 relative">
+            {/* Message input */}
+            <form
+              onSubmit={sendMessage}
+              className="p-4 border-t border-gray-800 flex gap-3 relative"
+            >
               {showEmoji && (
                 <div className="absolute bottom-20 left-4 z-50">
                   <EmojiPicker
