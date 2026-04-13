@@ -34,14 +34,24 @@ function Chat() {
   useEffect(() => {
     if (user) {
       socket.connect();
-      socket.emit('user:online', user._id);
+      socket.emit('user :online', user._id);
       fetchConversations();
     }
 
     socket.on('users:online', (users) => setOnlineUsers(users));
-    socket.on('message:receive', (message) => {
-      setMessages((prev) => [...prev, message]);
-    });
+   socket.on('message:receive', (message) => {
+  // Add message to chat window
+  setMessages(prev => [...prev, message]);
+
+  // Update lastMessage in conversation panel
+  setConversations(prev =>
+    prev.map(conv =>
+      conv._id === message.conversation
+        ? { ...conv, lastMessage: message }
+        : conv
+    )
+  );
+});
     socket.on('typing:start', ({ username }) => setTyping(username));
     socket.on('typing:stop', () => setTyping(null));
 
@@ -84,20 +94,36 @@ function Chat() {
     setMessages([]);
   };
 
-  const sendMessage = async (e) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !activeConversation) return;
-    try {
-      const res = await api.post('/chat/message', {
-        conversationId: activeConversation._id,
-        content: newMessage,
-      });
-      socket.emit('message:send', res.data.message);
-      setNewMessage('');
-    } catch (err) {
-      console.error(err);
-    }
-  };
+const sendMessage = async (e) => {
+  e.preventDefault();
+  if (!newMessage.trim() || !activeConversation) return;
+  try {
+    const res = await api.post('/chat/message', {
+      conversationId: activeConversation._id,
+      content: newMessage,
+    });
+
+    const sentMessage = res.data.message;
+
+    socket.emit('message:send', sentMessage);
+
+    // Add message to chat window
+    setMessages(prev => [...prev, sentMessage]);
+
+    // Update lastMessage in conversation panel
+    setConversations(prev =>
+      prev.map(conv =>
+        conv._id === activeConversation._id
+          ? { ...conv, lastMessage: sentMessage }
+          : conv
+      )
+    );
+
+    setNewMessage('');
+  } catch (err) {
+    console.error(err);
+  }
+};
 
   const sendFile = async (e) => {
     const file = e.target.files[0];
@@ -202,13 +228,15 @@ function Chat() {
           {/* Conversations list */}
           <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
             {conversations.length === 0 ? (
-              <p style={{ color: '#6b7280', fontSize: '14px', textAlign: 'center', marginTop: '32px' }}>
+              <p style={{ color: '#6b7280', fontSize: '14px', textAlign: 
+              'center', marginTop: '32px' }}>
                 No conversations yet
               </p>
             ) : (
               conversations.map((conv) => {
                 const other = getOtherMember(conv);
                 const isOnline = onlineUsers.includes(other?._id);
+                console.log(conv.lastMessage);
                 return (
                   <div
                     key={conv._id}
@@ -246,7 +274,8 @@ function Chat() {
                         {conv.isGroup ? conv.name : other?.username}
                       </p>
                       <p style={{ fontSize: '12px', color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {conv.lastMessage?.content || 'No messages yet'}
+                      {conv.lastMessage?.content || 'No messages yet'}
+                      
                       </p>
                     </div>
                   </div>
