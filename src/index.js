@@ -13,6 +13,7 @@ const chatRoutes = require('./routes/chatRoutes');
 const userRoutes = require('./routes/userRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const errorHandler = require('./middleware/errorHandler');
+const activityRoutes = require('./routes/activityRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -105,6 +106,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use("/api/admin", adminRoutes);
+app.use('/api/activity', activityRoutes);
 
 // Error Handler
 app.use(errorHandler);
